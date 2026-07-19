@@ -224,6 +224,61 @@ function drawReflection(
   ctx.restore();
 }
 
+/** 피사체를 배경 위에 3D 느낌(접지 그림자·반사·방향 그림자)으로 그린다. */
+function drawSubject(
+  ctx: CanvasRenderingContext2D,
+  bmp: ImageBitmap,
+  width: number,
+  height: number,
+  dark: boolean
+): void {
+  const maxW = width * 0.64;
+  const maxH = height * 0.54;
+  const scale = Math.min(maxW / bmp.width, maxH / bmp.height);
+  const objW = bmp.width * scale;
+  const objH = bmp.height * scale;
+  const cx = width / 2;
+  const baseY = height * 0.7;
+  const objTop = baseY - objH;
+  const objLeft = cx - objW / 2;
+
+  drawContactShadow(ctx, cx, baseY, objW, objH, dark);
+  drawReflection(ctx, bmp, objLeft, baseY, objW, objH, dark);
+
+  ctx.save();
+  ctx.shadowColor = `rgba(0,0,0,${dark ? 0.45 : 0.28})`;
+  ctx.shadowBlur = Math.max(width, height) * 0.035;
+  ctx.shadowOffsetX = width * 0.005;
+  ctx.shadowOffsetY = height * 0.022;
+  ctx.drawImage(bmp, objLeft, objTop, objW, objH);
+  ctx.restore();
+}
+
+/** 배경 이미지를 캔버스에 cover-fit 으로 그린다. */
+function coverDraw(
+  ctx: CanvasRenderingContext2D,
+  bmp: ImageBitmap,
+  width: number,
+  height: number
+): void {
+  const scale = Math.max(width / bmp.width, height / bmp.height);
+  const dw = bmp.width * scale;
+  const dh = bmp.height * scale;
+  ctx.drawImage(bmp, (width - dw) / 2, (height - dh) / 2, dw, dh);
+}
+
+/** 배경 이미지의 평균 밝기(0~1) — 그림자/반사 강도 튜닝용. */
+function averageLuminance(bmp: ImageBitmap): number {
+  const c = document.createElement("canvas");
+  c.width = 1;
+  c.height = 1;
+  const x = c.getContext("2d");
+  if (!x) return 0.5;
+  x.drawImage(bmp, 0, 0, 1, 1);
+  const [r, g, b] = x.getImageData(0, 0, 1, 1).data;
+  return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+}
+
 export interface CompositeResult {
   id: string;
   index: number;
@@ -259,28 +314,8 @@ export async function compositeAll(
       // 1) 배경 씬
       renderScene(ctx, scene, width, height);
 
-      // 2) 피사체 배치 (바닥에 서 있는 느낌 — 아래에 그림자/반사 공간 확보)
-      const maxW = width * 0.64;
-      const maxH = height * 0.54;
-      const scale = Math.min(maxW / bmp.width, maxH / bmp.height);
-      const objW = bmp.width * scale;
-      const objH = bmp.height * scale;
-      const cx = width / 2;
-      const baseY = height * 0.7;
-      const objTop = baseY - objH;
-      const objLeft = cx - objW / 2;
-
-      // 3) 접지 그림자 → 반사 → 피사체(방향 그림자) 순서로 깊이감 부여
-      drawContactShadow(ctx, cx, baseY, objW, objH, scene.dark);
-      drawReflection(ctx, bmp, objLeft, baseY, objW, objH, scene.dark);
-
-      ctx.save();
-      ctx.shadowColor = `rgba(0,0,0,${scene.dark ? 0.45 : 0.28})`;
-      ctx.shadowBlur = Math.max(width, height) * 0.035;
-      ctx.shadowOffsetX = width * 0.005;
-      ctx.shadowOffsetY = height * 0.022;
-      ctx.drawImage(bmp, objLeft, objTop, objW, objH);
-      ctx.restore();
+      // 2) 피사체 3D 합성
+      drawSubject(ctx, bmp, width, height, scene.dark);
 
       const blob = await new Promise<Blob>((resolve, reject) => {
         canvas.toBlob(
@@ -303,12 +338,64 @@ export async function compositeAll(
   }
 }
 
-/** 파일명 규칙: {mood}_{width}x{height}_{번호}.png */
+/**
+ * 누끼 이미지를 AI(또는 임의)로 생성된 배경 이미지들 위에 3D 느낌으로 합성한다.
+ * 배경 이미지는 cover-fit 으로 요청 사이즈에 맞춰 그린다.
+ */
+export async function compositeOnImages(
+  cutout: Blob,
+  backgrounds: Blob[],
+  width: number,
+  height: number
+): Promise<CompositeResult[]> {
+  const bmp = await createImageBitmap(cutout);
+
+  try {
+    const results: CompositeResult[] = [];
+
+    for (let i = 0; i < backgrounds.length; i++) {
+      const bg = await createImageBitmap(backgrounds[i]);
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) throw new Error("Canvas 컨텍스트를 생성할 수 없습니다.");
+
+        coverDraw(ctx, bg, width, height);
+        const dark = averageLuminance(bg) < 0.5;
+        drawSubject(ctx, bmp, width, height, dark);
+
+        const blob = await new Promise<Blob>((resolve, reject) => {
+          canvas.toBlob(
+            (b) => (b ? resolve(b) : reject(new Error("이미지 생성에 실패했습니다."))),
+            "image/png"
+          );
+        });
+
+        results.push({
+          id: `ai-${i + 1}`,
+          index: i + 1,
+          blob,
+          url: URL.createObjectURL(blob),
+        });
+      } finally {
+        bg.close();
+      }
+    }
+
+    return results;
+  } finally {
+    bmp.close();
+  }
+}
+
+/** 파일명 규칙: {prefix}_{width}x{height}_{번호}.png */
 export function buildFileName(
-  mood: MoodKey,
+  prefix: string,
   width: number,
   height: number,
   index: number
 ): string {
-  return `${mood}_${width}x${height}_${index}.png`;
+  return `${prefix}_${width}x${height}_${index}.png`;
 }

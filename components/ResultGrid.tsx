@@ -2,11 +2,10 @@
 
 import type { CompositeResult } from "@/lib/canvasUtils";
 import { buildFileName } from "@/lib/canvasUtils";
-import type { MoodKey } from "@/lib/backgrounds";
 
 interface ResultGridProps {
   results: CompositeResult[];
-  mood: MoodKey;
+  namePrefix: string;
   width: number;
   height: number;
   generating?: boolean;
@@ -23,7 +22,7 @@ function download(url: string, filename: string) {
 
 export default function ResultGrid({
   results,
-  mood,
+  namePrefix,
   width,
   height,
   generating,
@@ -49,7 +48,7 @@ export default function ResultGrid({
   return (
     <div className="grid grid-cols-2 gap-4">
       {results.map((result) => {
-        const filename = buildFileName(mood, width, height, result.index);
+        const filename = buildFileName(namePrefix, width, height, result.index);
         return (
           <div
             key={result.id}
