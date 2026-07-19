@@ -37,6 +37,23 @@ npm run build
 npm run start
 ```
 
+## Vercel 배포
+
+이 저장소를 Vercel 에 **GitHub 연동(Import)** 으로 올리면 자동 배포됩니다.
+
+1. [vercel.com/new](https://vercel.com/new) → GitHub 계정 연결 → `brandflow` 저장소 Import
+2. 배포할 브랜치를 `claude/instagram-post-generator-5d7fu6`(또는 병합 후 기본 브랜치)로 선택
+3. Framework 는 자동으로 **Next.js** 로 감지됨 — 별도 설정 없이 Deploy
+4. 완료되면 `https://<프로젝트>.vercel.app` URL 발급
+
+배포 시 모델은 `.env.production` 에 지정된 **imgly CDN** 에서 로드되므로
+200MB 모델을 배포 산출물에 싣지 않습니다. (`postinstall` 의 로컬 복사는
+Vercel 빌드에서 자동으로 건너뜀 — `scripts/copy-models.mjs` 의 `VERCEL` 가드)
+
+> 모델까지 완전 self-host 로 배포하려면 `.env.production` 의
+> `NEXT_PUBLIC_IMGLY_PUBLIC_PATH` 를 지우고, 빌드 환경변수에서 `SKIP_MODEL_COPY`
+> 를 설정하지 않으면 됩니다. (배포 용량이 200MB 커집니다)
+
 ## 모델 에셋 (self-hosting)
 
 누끼 추출 모델은 기본적으로 imgly CDN 에서 내려받지만, 이 프로젝트는

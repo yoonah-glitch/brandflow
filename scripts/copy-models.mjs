@@ -10,6 +10,16 @@ const src = path.resolve("node_modules/@imgly/background-removal-data/dist");
 const dest = path.resolve("public/models");
 
 async function main() {
+  // Vercel 등 CDN(publicPath 오버라이드)을 쓰는 프로덕션 빌드에서는
+  // 200MB 모델을 배포에 싣지 않도록 복사를 건너뛴다.
+  // (NEXT_PUBLIC_IMGLY_PUBLIC_PATH 로 CDN 이 지정되면 self-host 가 필요 없음)
+  if (process.env.VERCEL || process.env.SKIP_MODEL_COPY) {
+    console.log(
+      "[copy-models] CDN 모드(VERCEL/SKIP_MODEL_COPY) 감지 — 모델 로컬 복사를 건너뜁니다."
+    );
+    return;
+  }
+
   if (!existsSync(src)) {
     console.warn(
       "[copy-models] @imgly/background-removal-data dist 를 찾을 수 없어 건너뜁니다. " +
