@@ -11,9 +11,10 @@
 1. 작업물 사진 업로드 (드래그앤드롭 + 클릭)
 2. 브라우저에서 누끼 자동 추출 ([@imgly/background-removal](https://github.com/imgly/background-removal-js))
 3. 무드 태그 선택 — 미니멀 / 내추럴 / 다크 / 럭셔리 / 비비드
-4. 선택한 무드에 맞는 배경 4개에 누끼 이미지 합성
-5. 인스타그램 비율 선택 — 1:1 정사각형(1080×1080) / 4:5 세로형(1080×1350)
-6. 합성 이미지 PNG 개별 다운로드 (`{mood}_{ratio}_{번호}.png`)
+4. 무드별 **스튜디오 배경 4종**에 **3D 느낌으로 합성**
+   (그라디언트 깊이 + 소프트 조명 + 보케 + 필름 그레인 + 비네트, 접지 그림자·반사·방향 그림자)
+5. **사이즈 선택** — Instagram·Facebook·X·YouTube·Pinterest 프리셋 + **가로×세로 자유 입력**
+6. 합성 이미지 PNG 개별 다운로드 (`{mood}_{width}x{height}_{번호}.png`)
 
 ## 기술 스택
 
@@ -21,7 +22,7 @@
 - TypeScript
 - Tailwind CSS
 - @imgly/background-removal (누끼 추출, WASM)
-- Canvas API (리사이즈 + 배경 합성)
+- Canvas API (리사이즈 + 스튜디오 씬 렌더링 + 3D 합성)
 
 ## 시작하기
 
@@ -79,16 +80,17 @@ NEXT_PUBLIC_IMGLY_PUBLIC_PATH=https://staticimgly.com/@imgly/background-removal-
 ```
 app/
   layout.tsx          # 루트 레이아웃 / 메타데이터
-  page.tsx            # 메인 페이지 (업로드→누끼→무드→비율→결과 오케스트레이션)
+  page.tsx            # 메인 페이지 (업로드→누끼→무드→사이즈→결과 오케스트레이션)
   globals.css
 components/
   ImageUploader.tsx   # 드래그앤드롭 업로드 + 진행률 + 에러/재시도
   MoodSelector.tsx    # 무드 선택
-  RatioSelector.tsx   # 비율 선택
+  SizeSelector.tsx    # 사이즈 프리셋 + 커스텀 가로×세로 입력
   ResultGrid.tsx      # 결과 2열 그리드 + 다운로드
 lib/
-  backgrounds.ts      # 무드/배경/비율 스펙
-  canvasUtils.ts      # 배경 그리기 + 합성 + 파일명
+  backgrounds.ts      # 무드별 스튜디오 씬 스펙(그라디언트/블룸/보케/그레인/비네트)
+  sizes.ts            # 사이즈 프리셋 + 커스텀 사이즈 유틸
+  canvasUtils.ts      # 씬 렌더링 + 3D 합성(그림자/반사/조명) + 파일명
   imageUtils.ts       # 유효성 검사 + 리사이즈 + 브라우저 지원 체크
 scripts/
   copy-models.mjs     # 모델 에셋 복사(postinstall)
@@ -102,12 +104,22 @@ public/models/        # 자동 생성되는 모델 에셋 (gitignore)
 - 업로드 이미지는 처리 전 긴 변 기준 **최대 2000px** 로 리사이즈합니다.
 - `next.config.js` 에 WASM/Node 코어 모듈 fallback webpack 설정을 추가해 Vercel 배포에 대응합니다.
 
-## 무드별 배경
+## 무드별 스튜디오 배경 (씬 4종)
 
-| 무드 | 배경 4종 |
+단색/평면이 아니라 캔버스로 그라디언트·조명·질감을 합성한 "스튜디오 씬"입니다.
+
+| 무드 | 씬 특징 |
 | --- | --- |
-| 미니멀 | 오프화이트 솔리드 (`#F8F7F5`, `#EDECEA`, `#F2F1EF`, `#E8E7E4`) |
-| 내추럴 | 베이지·그린 계열 솔리드 + 그라디언트 |
-| 다크 | 다크그레이 솔리드 (`#1A1A1A`, `#2C2C2C`, `#242422`, `#1E1E1E`) |
-| 럭셔리 | 딥블랙 + 골드톤 그라디언트 |
-| 비비드 | 파스텔 그라디언트 (핑크·블루·그린·오렌지) |
+| 미니멀 | 오프화이트 그라디언트 + 부드러운 상단광 + 미세 그레인 |
+| 내추럴 | 베이지·그린 그라디언트 + 따뜻한 자연광 블룸 |
+| 다크 | 차콜 그라디언트 + 피사체 뒤 스포트라이트 + 강한 비네트 + 그레인 |
+| 럭셔리 | 딥블랙→골드 그라디언트 + 골드 보케 + 림라이트 |
+| 비비드 | 파스텔 그라디언트 + 컬러 보케 |
+
+각 씬 위에 **접지 그림자 + 반사 + 방향성 드롭섀도**를 얹어 입체감을 만듭니다.
+
+## 실사 배경을 쓰고 싶다면
+
+핀터레스트 등에서 이미지를 가져와 번들하는 것은 저작권 문제로 지원하지 않습니다.
+대신 **Unsplash / Pexels API**(상업적 사용 가능, 무료 API 키)를 붙여 런타임에 실제
+사진을 무드별로 불러오도록 확장할 수 있습니다. (선택 사항)
