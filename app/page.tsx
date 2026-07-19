@@ -1,13 +1,23 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import ImageUploader, { type UploadStatus } from "@/components/ImageUploader";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import ImageUploader, {
+  type UploadItem,
+  type ItemStatus,
+  type OverallStatus,
+} from "@/components/ImageUploader";
 import MoodSelector from "@/components/MoodSelector";
 import SizeSelector from "@/components/SizeSelector";
 import ResultGrid from "@/components/ResultGrid";
 import AiBackgroundPanel, { type AiStatus } from "@/components/AiBackgroundPanel";
 import type { MoodKey } from "@/lib/backgrounds";
-import { compositeAll, compositeOnImages, type CompositeResult } from "@/lib/canvasUtils";
+import {
+  compositeAll,
+  compositeOnImages,
+  compositeBatchScenes,
+  compositeBatchOnImages,
+  type OutImage,
+} from "@/lib/canvasUtils";
 import { generateAiBackgrounds } from "@/lib/aiBackground";
 import { DEFAULT_SIZE } from "@/lib/sizes";
 import { isBrowserSupported, isImageFile, resizeImageFile } from "@/lib/imageUtils";
@@ -19,17 +29,24 @@ function resolvePublicPath(): string {
   return new URL("/models/", window.location.origin).toString();
 }
 
+function uid(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
+  return `${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+}
+
 type BgMode = "preset" | "ai";
+
+interface Item extends UploadItem {
+  file: File;
+  cutout?: Blob;
+}
 
 export default function Home() {
   const [supported, setSupported] = useState(true);
 
-  const [status, setStatus] = useState<UploadStatus>("idle");
-  const [progress, setProgress] = useState(0);
-  const [error, setError] = useState<string | null>(null);
-
-  const [cutoutBlob, setCutoutBlob] = useState<Blob | null>(null);
-  const [cutoutUrl, setCutoutUrl] = useState<string | null>(null);
+  const [items, setItems] = useState<Item[]>([]);
+  const [overall, setOverall] = useState<OverallStatus>("idle");
+  const [globalError, setGlobalError] = useState<string | null>(null);
 
   const [bgMode, setBgMode] = useState<BgMode>("preset");
   const [mood, setMood] = useState<MoodKey | null>(null);
@@ -41,77 +58,110 @@ export default function Home() {
 
   const [size, setSize] = useState(DEFAULT_SIZE);
 
-  const [results, setResults] = useState<CompositeResult[]>([]);
+  const [results, setResults] = useState<OutImage[]>([]);
   const [generating, setGenerating] = useState(false);
 
-  const lastFileRef = useRef<File | null>(null);
+  const itemsRef = useRef<Item[]>([]);
+  const processingRef = useRef(false);
 
   useEffect(() => {
     setSupported(isBrowserSupported());
   }, []);
 
-  // 업로드 → 리사이즈 → 누끼 추출
-  const processFile = useCallback(async (file: File) => {
-    if (!isImageFile(file)) {
-      setStatus("error");
-      setError("이미지 파일만 업로드 가능해요");
-      return;
-    }
+  const syncItems = useCallback((next: Item[]) => {
+    itemsRef.current = next;
+    setItems(next);
+  }, []);
 
-    lastFileRef.current = file;
-    setError(null);
-    setCutoutBlob(null);
-    setCutoutUrl((prev) => {
-      if (prev) URL.revokeObjectURL(prev);
-      return null;
-    });
+  const updateItem = useCallback(
+    (id: string, patch: Partial<Item>) => {
+      syncItems(itemsRef.current.map((i) => (i.id === id ? { ...i, ...patch } : i)));
+    },
+    [syncItems]
+  );
+
+  // 대기 중인 항목을 순차적으로 배경 제거
+  const processQueue = useCallback(async () => {
+    if (processingRef.current) return;
+    processingRef.current = true;
+    setOverall("extracting");
 
     try {
-      setStatus("resizing");
-      setProgress(0);
-      const resized = await resizeImageFile(file);
-
-      setStatus("removing");
-      setProgress(0);
-
       const { removeBackground } = await import("@imgly/background-removal");
-      const blob = await removeBackground(resized, {
-        publicPath: resolvePublicPath(),
-        output: { format: "image/png" },
-        progress: (_key: string, current: number, total: number) => {
-          if (total > 0) setProgress(Math.min(100, Math.round((current / total) * 100)));
-        },
-      });
+      const publicPath = resolvePublicPath();
 
-      const url = URL.createObjectURL(blob);
-      setCutoutBlob(blob);
-      setCutoutUrl(url);
-      setStatus("ready");
-      setProgress(100);
-    } catch (err) {
-      console.error("배경 제거 실패:", err);
-      setStatus("error");
-      setError("배경 제거에 실패했어요. 다시 시도해주세요");
+      while (true) {
+        const next = itemsRef.current.find((i) => i.status === "pending");
+        if (!next) break;
+
+        updateItem(next.id, { status: "processing", progress: 0 });
+        try {
+          const resized = await resizeImageFile(next.file);
+          const blob = await removeBackground(resized, {
+            publicPath,
+            output: { format: "image/png" },
+            progress: (_k: string, c: number, t: number) => {
+              if (t > 0) updateItem(next.id, { progress: Math.min(100, Math.round((c / t) * 100)) });
+            },
+          });
+          updateItem(next.id, {
+            status: "done",
+            progress: 100,
+            cutout: blob,
+            cutoutUrl: URL.createObjectURL(blob),
+          });
+        } catch (err) {
+          console.error("배경 제거 실패:", err);
+          updateItem(next.id, { status: "error", error: "배경 제거 실패" });
+        }
+      }
+    } finally {
+      processingRef.current = false;
+      const list = itemsRef.current;
+      setOverall(
+        list.some((i) => i.status === "done")
+          ? "ready"
+          : list.some((i) => i.status === "error")
+            ? "error"
+            : "idle"
+      );
     }
-  }, []);
+  }, [updateItem]);
 
-  const handleRetry = useCallback(() => {
-    if (lastFileRef.current) void processFile(lastFileRef.current);
-  }, [processFile]);
+  const handleFiles = useCallback(
+    (files: File[]) => {
+      const valid = files.filter(isImageFile);
+      setGlobalError(valid.length < files.length ? "이미지 파일만 업로드 가능해요" : null);
+      if (valid.length === 0) return;
+
+      const newItems: Item[] = valid.map((file) => ({
+        id: uid(),
+        name: file.name,
+        file,
+        status: "pending" as ItemStatus,
+        progress: 0,
+      }));
+      syncItems([...itemsRef.current, ...newItems]);
+      void processQueue();
+    },
+    [processQueue, syncItems]
+  );
+
+  const handleRetryItem = useCallback(
+    (id: string) => {
+      updateItem(id, { status: "pending", error: undefined });
+      void processQueue();
+    },
+    [processQueue, updateItem]
+  );
 
   const handleReset = useCallback(() => {
-    setStatus("idle");
-    setProgress(0);
-    setError(null);
-    setCutoutBlob(null);
-    setCutoutUrl((prev) => {
-      if (prev) URL.revokeObjectURL(prev);
-      return null;
-    });
-    lastFileRef.current = null;
-  }, []);
+    itemsRef.current.forEach((i) => i.cutoutUrl && URL.revokeObjectURL(i.cutoutUrl));
+    syncItems([]);
+    setOverall("idle");
+    setGlobalError(null);
+  }, [syncItems]);
 
-  // AI 배경 생성 트리거
   const handleGenerateAi = useCallback(async () => {
     if (!aiPrompt.trim()) return;
     setAiStatus("loading");
@@ -127,7 +177,13 @@ export default function Home() {
     }
   }, [aiPrompt, size.width, size.height]);
 
-  // 누끼 + (프리셋 무드 | AI 배경) + 사이즈 → 4장 합성 (사이즈 변경은 디바운스)
+  const doneItems = useMemo(
+    () => items.filter((i) => i.status === "done" && i.cutout),
+    [items]
+  );
+  const doneKey = doneItems.map((i) => i.id).join(",");
+
+  // 합성: 완료된 누끼 + (무드|AI) + 사이즈 → 결과
   useEffect(() => {
     const clear = () =>
       setResults((prev) => {
@@ -135,10 +191,12 @@ export default function Home() {
         return [];
       });
 
-    if (!cutoutBlob) {
+    const done = itemsRef.current.filter((i) => i.status === "done" && i.cutout);
+    if (done.length === 0) {
       clear();
       return;
     }
+    if (overall !== "ready") return; // 추출이 끝날 때까지 대기
     if (bgMode === "preset" && !mood) {
       clear();
       return;
@@ -152,10 +210,17 @@ export default function Home() {
     setGenerating(true);
 
     const timer = setTimeout(() => {
-      const task =
+      const single = done.length === 1;
+      const batch = done.map((i) => ({ id: i.id, name: i.name, cutout: i.cutout! }));
+
+      const task: Promise<OutImage[]> =
         bgMode === "ai"
-          ? compositeOnImages(cutoutBlob, aiBgBlobs!, size.width, size.height)
-          : compositeAll(cutoutBlob, mood!, size.width, size.height);
+          ? single
+            ? compositeOnImages(done[0].cutout!, aiBgBlobs!, size.width, size.height)
+            : compositeBatchOnImages(batch, aiBgBlobs!, size.width, size.height)
+          : single
+            ? compositeAll(done[0].cutout!, mood!, size.width, size.height)
+            : compositeBatchScenes(batch, mood!, size.width, size.height);
 
       task
         .then((next) => {
@@ -181,13 +246,23 @@ export default function Home() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [cutoutBlob, bgMode, mood, aiBgBlobs, size.width, size.height]);
+    // doneKey 로 완료 집합 변화만 감지 (진행률 갱신에는 재실행 안 함)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [overall, doneKey, bgMode, mood, aiBgBlobs, size.width, size.height]);
 
-  const showEditor = status === "ready" && !!cutoutBlob;
+  const hasCutout = doneItems.length > 0;
   const hasBg =
-    (bgMode === "preset" && !!mood) ||
-    (bgMode === "ai" && !!aiBgBlobs && aiBgBlobs.length > 0);
-  const namePrefix = bgMode === "ai" ? "ai" : mood ?? "bg";
+    (bgMode === "preset" && !!mood) || (bgMode === "ai" && !!aiBgBlobs && aiBgBlobs.length > 0);
+  const multiple = doneItems.length > 1;
+
+  const uploadItems: UploadItem[] = items.map((i) => ({
+    id: i.id,
+    name: i.name,
+    status: i.status,
+    progress: i.progress,
+    cutoutUrl: i.cutoutUrl,
+    error: i.error,
+  }));
 
   return (
     <main className="mx-auto min-h-screen w-full max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
@@ -197,8 +272,8 @@ export default function Home() {
           소셜 게시물 이미지 생성기
         </h1>
         <p className="mt-2 text-sm text-neutral-600 sm:text-base">
-          작업물의 배경을 자동으로 제거하고, 무드 프리셋이나 AI로 만든 배경에 입체감 있게
-          합성해 어디에든 올릴 이미지를 만들어드려요.
+          작업물 여러 장을 한꺼번에 올리면, 배경을 자동 제거하고 무드·AI 배경에 입체감 있게
+          합성해 한 번에 만들어드려요.
         </p>
       </header>
 
@@ -212,26 +287,25 @@ export default function Home() {
       <div className={supported ? "space-y-10" : "pointer-events-none space-y-10 opacity-50"}>
         {/* STEP 1 */}
         <section>
-          <SectionTitle step={1} title="작업물 업로드" />
+          <SectionTitle step={1} title="작업물 업로드 (여러 장 가능)" />
           <ImageUploader
-            status={status}
-            progress={progress}
-            previewUrl={cutoutUrl}
-            error={error}
-            onFile={processFile}
-            onRetry={handleRetry}
+            items={uploadItems}
+            overallStatus={overall}
+            globalError={globalError}
+            onFiles={handleFiles}
+            onRetryItem={handleRetryItem}
             onReset={handleReset}
           />
         </section>
 
-        {/* STEP 2 : 배경 (프리셋 무드 / AI) */}
-        <section className={showEditor ? "" : "pointer-events-none opacity-40"}>
+        {/* STEP 2 : 배경 */}
+        <section className={hasCutout ? "" : "pointer-events-none opacity-40"}>
           <SectionTitle step={2} title="배경 선택" />
 
           <div className="mb-4 inline-flex rounded-lg border border-neutral-200 bg-neutral-100 p-1">
             <button
               type="button"
-              disabled={!showEditor}
+              disabled={!hasCutout}
               onClick={() => setBgMode("preset")}
               className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
                 bgMode === "preset" ? "bg-white text-ink shadow-sm" : "text-neutral-500"
@@ -241,7 +315,7 @@ export default function Home() {
             </button>
             <button
               type="button"
-              disabled={!showEditor}
+              disabled={!hasCutout}
               onClick={() => setBgMode("ai")}
               className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
                 bgMode === "ai" ? "bg-white text-ink shadow-sm" : "text-neutral-500"
@@ -252,7 +326,7 @@ export default function Home() {
           </div>
 
           {bgMode === "preset" ? (
-            <MoodSelector selected={mood} onSelect={setMood} disabled={!showEditor} />
+            <MoodSelector selected={mood} onSelect={setMood} disabled={!hasCutout} />
           ) : (
             <AiBackgroundPanel
               prompt={aiPrompt}
@@ -260,36 +334,42 @@ export default function Home() {
               onGenerate={handleGenerateAi}
               status={aiStatus}
               error={aiError}
-              disabled={!showEditor}
+              disabled={!hasCutout}
             />
+          )}
+
+          {multiple && hasBg && (
+            <p className="mt-3 text-xs text-neutral-500">
+              여러 장을 올려서 각 사진당 1개씩 생성됩니다. (한 장만 올리면 4가지 스타일 변형)
+            </p>
           )}
         </section>
 
         {/* STEP 3 */}
-        <section className={showEditor ? "" : "pointer-events-none opacity-40"}>
+        <section className={hasCutout ? "" : "pointer-events-none opacity-40"}>
           <SectionTitle step={3} title="사이즈 선택" />
           <SizeSelector
             width={size.width}
             height={size.height}
             onChange={(width, height) => setSize({ width, height })}
-            disabled={!showEditor}
+            disabled={!hasCutout}
           />
         </section>
 
         {/* STEP 4 */}
-        {showEditor && hasBg && (
+        {hasCutout && hasBg && (
           <section>
             <SectionTitle step={4} title="결과 이미지" />
             {generating || results.length > 0 ? (
               <ResultGrid
                 results={results}
-                namePrefix={namePrefix}
                 width={size.width}
                 height={size.height}
                 generating={generating}
+                count={multiple ? doneItems.length : 4}
               />
             ) : (
-              <p className="text-sm text-neutral-500">배경을 선택하면 4개의 이미지가 생성돼요.</p>
+              <p className="text-sm text-neutral-500">배경을 선택하면 이미지가 생성돼요.</p>
             )}
           </section>
         )}

@@ -279,123 +279,162 @@ function averageLuminance(bmp: ImageBitmap): number {
   return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
 }
 
-export interface CompositeResult {
+export interface OutImage {
   id: string;
-  index: number;
   blob: Blob;
   url: string;
+  filename: string;
 }
 
-/**
- * 누끼 이미지를 무드의 4개 스튜디오 씬에 3D 느낌으로 합성한다.
- * width/height 는 커스텀 사이즈를 그대로 사용.
- */
+/** 배경 한 겹: 무드 씬 또는 (AI 등) 이미지 */
+export type Background =
+  | { type: "scene"; scene: Scene }
+  | { type: "image"; bitmap: ImageBitmap };
+
+/** 파일명에 쓸 수 있게 원본 이름을 정리 (확장자 제거 + 안전 문자). */
+function safeName(name: string): string {
+  return name
+    .replace(/\.[^.]+$/, "")
+    .replace(/[^\p{L}\p{N}_-]+/gu, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40) || "image";
+}
+
+/** 누끼(디코드된 비트맵) 1장을 배경 1겹 위에 3D 느낌으로 합성해 Blob 반환. */
+async function composeOne(
+  cutout: ImageBitmap,
+  bg: Background,
+  width: number,
+  height: number
+): Promise<Blob> {
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas 컨텍스트를 생성할 수 없습니다.");
+
+  let dark: boolean;
+  if (bg.type === "scene") {
+    renderScene(ctx, bg.scene, width, height);
+    dark = bg.scene.dark;
+  } else {
+    coverDraw(ctx, bg.bitmap, width, height);
+    dark = averageLuminance(bg.bitmap) < 0.5;
+  }
+
+  drawSubject(ctx, cutout, width, height, dark);
+
+  return new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob(
+      (b) => (b ? resolve(b) : reject(new Error("이미지 생성에 실패했습니다."))),
+      "image/png"
+    );
+  });
+}
+
+function toOut(id: string, blob: Blob, filename: string): OutImage {
+  return { id, blob, url: URL.createObjectURL(blob), filename };
+}
+
+/** 단일 누끼 → 무드의 4개 스튜디오 씬(스타일 변형). */
 export async function compositeAll(
   cutout: Blob,
   mood: MoodKey,
   width: number,
   height: number
-): Promise<CompositeResult[]> {
+): Promise<OutImage[]> {
   const { scenes } = getMood(mood);
   const bmp = await createImageBitmap(cutout);
-
   try {
-    const results: CompositeResult[] = [];
-
+    const results: OutImage[] = [];
     for (let i = 0; i < scenes.length; i++) {
-      const scene = scenes[i];
-
-      const canvas = document.createElement("canvas");
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) throw new Error("Canvas 컨텍스트를 생성할 수 없습니다.");
-
-      // 1) 배경 씬
-      renderScene(ctx, scene, width, height);
-
-      // 2) 피사체 3D 합성
-      drawSubject(ctx, bmp, width, height, scene.dark);
-
-      const blob = await new Promise<Blob>((resolve, reject) => {
-        canvas.toBlob(
-          (b) => (b ? resolve(b) : reject(new Error("이미지 생성에 실패했습니다."))),
-          "image/png"
-        );
-      });
-
-      results.push({
-        id: scene.id,
-        index: i + 1,
-        blob,
-        url: URL.createObjectURL(blob),
-      });
+      const blob = await composeOne(bmp, { type: "scene", scene: scenes[i] }, width, height);
+      results.push(toOut(scenes[i].id, blob, `${mood}_${width}x${height}_${i + 1}.png`));
     }
-
     return results;
   } finally {
     bmp.close();
   }
 }
 
-/**
- * 누끼 이미지를 AI(또는 임의)로 생성된 배경 이미지들 위에 3D 느낌으로 합성한다.
- * 배경 이미지는 cover-fit 으로 요청 사이즈에 맞춰 그린다.
- */
+/** 단일 누끼 → AI 배경 이미지들(스타일 변형). */
 export async function compositeOnImages(
   cutout: Blob,
   backgrounds: Blob[],
   width: number,
   height: number
-): Promise<CompositeResult[]> {
+): Promise<OutImage[]> {
   const bmp = await createImageBitmap(cutout);
-
+  const bgBmps = await Promise.all(backgrounds.map((b) => createImageBitmap(b)));
   try {
-    const results: CompositeResult[] = [];
-
-    for (let i = 0; i < backgrounds.length; i++) {
-      const bg = await createImageBitmap(backgrounds[i]);
-      try {
-        const canvas = document.createElement("canvas");
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) throw new Error("Canvas 컨텍스트를 생성할 수 없습니다.");
-
-        coverDraw(ctx, bg, width, height);
-        const dark = averageLuminance(bg) < 0.5;
-        drawSubject(ctx, bmp, width, height, dark);
-
-        const blob = await new Promise<Blob>((resolve, reject) => {
-          canvas.toBlob(
-            (b) => (b ? resolve(b) : reject(new Error("이미지 생성에 실패했습니다."))),
-            "image/png"
-          );
-        });
-
-        results.push({
-          id: `ai-${i + 1}`,
-          index: i + 1,
-          blob,
-          url: URL.createObjectURL(blob),
-        });
-      } finally {
-        bg.close();
-      }
+    const results: OutImage[] = [];
+    for (let i = 0; i < bgBmps.length; i++) {
+      const blob = await composeOne(bmp, { type: "image", bitmap: bgBmps[i] }, width, height);
+      results.push(toOut(`ai-${i + 1}`, blob, `ai_${width}x${height}_${i + 1}.png`));
     }
-
     return results;
   } finally {
     bmp.close();
+    bgBmps.forEach((b) => b.close());
   }
 }
 
-/** 파일명 규칙: {prefix}_{width}x{height}_{번호}.png */
-export function buildFileName(
-  prefix: string,
+export interface BatchItem {
+  id: string;
+  name: string;
+  cutout: Blob;
+}
+
+/** 여러 누끼 → 각 1장씩 (무드 씬을 순환하며 배치). */
+export async function compositeBatchScenes(
+  items: BatchItem[],
+  mood: MoodKey,
   width: number,
-  height: number,
-  index: number
-): string {
-  return `${prefix}_${width}x${height}_${index}.png`;
+  height: number
+): Promise<OutImage[]> {
+  const { scenes } = getMood(mood);
+  const results: OutImage[] = [];
+  for (let i = 0; i < items.length; i++) {
+    const bmp = await createImageBitmap(items[i].cutout);
+    try {
+      const scene = scenes[i % scenes.length];
+      const blob = await composeOne(bmp, { type: "scene", scene }, width, height);
+      const n = String(i + 1).padStart(2, "0");
+      results.push(
+        toOut(items[i].id, blob, `${n}_${safeName(items[i].name)}_${mood}_${width}x${height}.png`)
+      );
+    } finally {
+      bmp.close();
+    }
+  }
+  return results;
+}
+
+/** 여러 누끼 → 각 1장씩 (AI 배경 이미지를 순환하며 배치). */
+export async function compositeBatchOnImages(
+  items: BatchItem[],
+  backgrounds: Blob[],
+  width: number,
+  height: number
+): Promise<OutImage[]> {
+  const bgBmps = await Promise.all(backgrounds.map((b) => createImageBitmap(b)));
+  try {
+    const results: OutImage[] = [];
+    for (let i = 0; i < items.length; i++) {
+      const bmp = await createImageBitmap(items[i].cutout);
+      try {
+        const bitmap = bgBmps[i % bgBmps.length];
+        const blob = await composeOne(bmp, { type: "image", bitmap }, width, height);
+        const n = String(i + 1).padStart(2, "0");
+        results.push(
+          toOut(items[i].id, blob, `${n}_${safeName(items[i].name)}_ai_${width}x${height}.png`)
+        );
+      } finally {
+        bmp.close();
+      }
+    }
+    return results;
+  } finally {
+    bgBmps.forEach((b) => b.close());
+  }
 }
