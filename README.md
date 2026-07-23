@@ -106,6 +106,7 @@ app/
   globals.css             # Tailwind + 전역 스타일 / 애니메이션
   page.tsx                # 메인 8단계 온보딩 (인트로 → 질문 → 결과 이동)
   result/page.tsx         # 결과 페이지 (추천 로드 · 재추천 · 로딩 문구)
+  pricing/page.tsx        # 요금제 페이지 (무료/월간/연간 플랜)
   api/
     recommend/route.ts    # Claude 추천 (JSON 반환 파싱)
     book/route.ts         # 카카오 책 검색 (표지 이미지)
@@ -115,6 +116,7 @@ components/
   ProgressBar.tsx         # 상단 진행률 바 + 문구
   BookCard.tsx            # 추천 결과 카드 (표지·매치·이유·구매·공유·재추천)
   Thermometer.tsx         # 책 온도계 (난이도/감성/두께 ●●●○○)
+  PricingPlans.tsx        # 요금제 카드 3종 + "준비 중입니다" 팝업
 lib/
   types.ts                # 공용 타입 · localStorage 키 · 무료 횟수
   steps.ts                # 8단계 정의 · 진행률 문구 · 로딩 문구

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import Chip from "@/components/Chip";
 import ProgressBar from "@/components/ProgressBar";
 import { STEPS, TOTAL_STEPS, progressLabel } from "@/lib/steps";
@@ -115,6 +116,12 @@ export default function OnboardingPage() {
             내 책 이상형 찾기 시작
           </button>
           <p className="text-[12px] text-gray-400">1분이면 충분해요 · 무료 3회</p>
+          <Link
+            href="/pricing"
+            className="text-[13px] font-medium text-brand underline underline-offset-2 hover:text-brand-dark"
+          >
+            요금제 보기
+          </Link>
         </div>
       </main>
     );

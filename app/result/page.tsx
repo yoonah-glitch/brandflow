@@ -237,12 +237,20 @@ export default function ResultPage() {
         >
           Bookmatch
         </Link>
-        <Link
-          href="/"
-          className="text-[13px] font-medium text-gray-400 hover:text-gray-600"
-        >
-          처음부터 다시
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/pricing"
+            className="rounded-full bg-brand-soft px-3 py-1.5 text-[12px] font-semibold text-brand transition-colors hover:bg-brand/15"
+          >
+            ⭐ 프리미엄
+          </Link>
+          <Link
+            href="/"
+            className="text-[13px] font-medium text-gray-400 hover:text-gray-600"
+          >
+            처음부터 다시
+          </Link>
+        </div>
       </header>
 
       <p className="mb-4 text-[15px] text-gray-500">

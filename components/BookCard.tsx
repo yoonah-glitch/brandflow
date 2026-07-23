@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import type { Answers, ResultBook } from "@/lib/types";
 import Thermometer from "./Thermometer";
 import { downloadShareCard } from "@/lib/shareCard";
@@ -236,6 +237,23 @@ export default function BookCard({
         <p className="text-center text-[12px] text-gray-400">
           &lsquo;별로예요&rsquo;는 횟수 차감 없이 다시 골라드려요.
         </p>
+
+        {/* 프리미엄 업그레이드 안내 */}
+        {remaining <= 0 ? (
+          <Link
+            href="/pricing"
+            className="mt-1 flex items-center justify-center rounded-full bg-brand px-4 py-3 text-[14px] font-semibold text-white transition-colors hover:bg-brand-dark"
+          >
+            무료 추천을 다 썼어요 · 프리미엄으로 무제한 →
+          </Link>
+        ) : (
+          <Link
+            href="/pricing"
+            className="mt-1 text-center text-[13px] font-medium text-brand underline underline-offset-2 hover:text-brand-dark"
+          >
+            ⭐ 프리미엄으로 무제한 추천받기
+          </Link>
+        )}
       </div>
     </div>
   );
