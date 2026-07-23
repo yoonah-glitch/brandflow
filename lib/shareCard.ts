@@ -32,72 +32,102 @@ function wrapText(
   return lines;
 }
 
+// 둥근 사각형 경로 (ctx.roundRect 미지원 환경 대비)
+function roundRectPath(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number,
+): void {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+// emotion(2줄)에서 짧은 요약 한 줄을 뽑는다.
+function emotionSummary(emotion: string): string {
+  const first =
+    emotion
+      .split("\n")
+      .map((s) => s.trim())
+      .filter(Boolean)[0] || emotion.trim();
+  return first.length > 24 ? first.slice(0, 23) + "…" : first;
+}
+
 /**
- * 인스타 공유용 세로 카드 이미지를 만들어 PNG 다운로드한다.
- * 카카오 표지 이미지는 CORS 로 인해 canvas 가 오염될 수 있어,
- * 오염되면 표지 없이 텍스트 카드로 안전하게 대체한다.
+ * 공유용 세로 카드 이미지를 만들어 PNG 다운로드한다.
+ * 베이지/크림 팔레트, 조용한 톤. 표지 이미지는 CORS 로 canvas 가
+ * 오염될 수 있어, 오염되면 표지 없이 텍스트 카드로 안전하게 대체한다.
+ *
+ * 카드 문구: "나는 지금 '[감정 요약]' 상태래요 📚 / 다시, 책이 골라줬어요"
  */
 export async function downloadShareCard(book: ResultBook): Promise<void> {
   const W = 1080;
   const H = 1350;
+  const serif = "'Nanum Myeongjo', Georgia, serif";
   const canvas = document.createElement("canvas");
   canvas.width = W;
   canvas.height = H;
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
 
-  // 배경 (은은한 보라 그라디언트)
-  const grad = ctx.createLinearGradient(0, 0, 0, H);
-  grad.addColorStop(0, "#EEEDF9");
-  grad.addColorStop(1, "#ffffff");
-  ctx.fillStyle = grad;
+  // 배경 (은은한 베이지)
+  ctx.fillStyle = "#F3EEE4";
   ctx.fillRect(0, 0, W, H);
 
-  // 상단 브랜드 워드마크
-  ctx.fillStyle = "#534AB7";
-  ctx.font = "700 44px -apple-system, BlinkMacSystemFont, sans-serif";
+  // 종이 패널 (솔리드 크림)
+  ctx.fillStyle = "#FCFAF5";
+  roundRectPath(ctx, 56, 56, W - 112, H - 112, 44);
+  ctx.fill();
+  ctx.strokeStyle = "#E8E1D3";
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
   ctx.textAlign = "center";
-  ctx.fillText("Bookmatch", W / 2, 120);
 
-  ctx.font = "500 30px -apple-system, sans-serif";
-  ctx.fillStyle = "#6E64D6";
-  ctx.fillText("나의 책 이상형", W / 2, 172);
+  // 브랜드 워드마크
+  ctx.fillStyle = "#A9805C";
+  ctx.font = `700 46px ${serif}`;
+  ctx.fillText("다시, 책", W / 2, 168);
 
-  // 표지 이미지 (있으면)
+  ctx.fillStyle = "#B3A996";
+  ctx.font = `400 26px ${serif}`;
+  ctx.fillText("지친 당신이 다시 시작하는 곳", W / 2, 214);
+
+  // 표지 이미지
   let coverTainted = false;
-  const coverW = 380;
-  const coverH = 540;
+  const coverW = 320;
+  const coverH = 458;
   const coverX = (W - coverW) / 2;
-  const coverY = 230;
+  const coverY = 268;
   if (book.cover) {
     const img = await loadImage(book.cover);
     if (img) {
-      // 카드 뒤 그림자
-      ctx.save();
-      ctx.shadowColor = "rgba(83,74,183,0.25)";
-      ctx.shadowBlur = 40;
-      ctx.shadowOffsetY = 16;
-      ctx.fillStyle = "#fff";
-      ctx.fillRect(coverX, coverY, coverW, coverH);
-      ctx.restore();
       try {
         ctx.drawImage(img, coverX, coverY, coverW, coverH);
-        // 오염 여부 미리 감지
-        ctx.getImageData(coverX, coverY, 1, 1);
+        ctx.getImageData(coverX, coverY, 1, 1); // 오염 감지
       } catch {
         coverTainted = true;
       }
+    } else {
+      coverTainted = true;
     }
   }
 
-  // 표지가 없거나 오염됐으면 자리표시 박스
+  // 표지가 없거나 오염됐으면 베이지 자리표시 박스
   if (!book.cover || coverTainted) {
-    ctx.fillStyle = "#534AB7";
-    ctx.fillRect(coverX, coverY, coverW, coverH);
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "600 34px -apple-system, sans-serif";
-    ctx.textAlign = "center";
-    const titleLines = wrapText(ctx, book.title, coverW - 60).slice(0, 5);
+    ctx.fillStyle = "#EFE6DA";
+    roundRectPath(ctx, coverX, coverY, coverW, coverH, 10);
+    ctx.fill();
+    ctx.fillStyle = "#8A6547";
+    ctx.font = `700 34px ${serif}`;
+    const titleLines = wrapText(ctx, book.title, coverW - 56).slice(0, 5);
     let ty = coverY + coverH / 2 - (titleLines.length - 1) * 24;
     for (const l of titleLines) {
       ctx.fillText(l, W / 2, ty);
@@ -105,45 +135,38 @@ export async function downloadShareCard(book: ResultBook): Promise<void> {
     }
   }
 
-  // 매치 퍼센트 배지
-  ctx.fillStyle = "#534AB7";
-  ctx.beginPath();
-  ctx.arc(W / 2, coverY + coverH + 6, 62, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "#ffffff";
-  ctx.font = "800 40px -apple-system, sans-serif";
-  ctx.textAlign = "center";
-  ctx.fillText(`${book.match}%`, W / 2, coverY + coverH + 20);
-
   // 제목 / 저자
-  const textTop = coverY + coverH + 120;
-  ctx.fillStyle = "#1a1a1a";
-  ctx.font = "700 48px -apple-system, sans-serif";
-  const tLines = wrapText(ctx, book.title, W - 160).slice(0, 2);
-  let yy = textTop;
+  ctx.fillStyle = "#38322A";
+  ctx.font = `700 46px ${serif}`;
+  const tLines = wrapText(ctx, book.title, W - 200).slice(0, 2);
+  let yy = coverY + coverH + 76;
   for (const l of tLines) {
     ctx.fillText(l, W / 2, yy);
-    yy += 60;
+    yy += 58;
   }
-  ctx.font = "400 30px -apple-system, sans-serif";
-  ctx.fillStyle = "#666";
-  ctx.fillText(book.author, W / 2, yy + 4);
+  ctx.font = `400 28px ${serif}`;
+  ctx.fillStyle = "#877D6D";
+  ctx.fillText(book.author, W / 2, yy + 2);
 
-  // 추천 이유
-  ctx.font = "400 30px -apple-system, sans-serif";
-  ctx.fillStyle = "#444";
-  const reasonLines = wrapText(ctx, book.reason, W - 200).slice(0, 4);
-  let ry = yy + 74;
-  for (const l of reasonLines) {
-    ctx.fillText(l, W / 2, ry);
-    ry += 44;
+  // 하단 문구 (2줄)
+  const caption1 = `나는 지금 '${emotionSummary(book.emotion)}' 상태래요 📚`;
+  ctx.font = `400 34px ${serif}`;
+  ctx.fillStyle = "#38322A";
+  const cLines = wrapText(ctx, caption1, W - 220).slice(0, 2);
+  let cy = H - 220;
+  for (const l of cLines) {
+    ctx.fillText(l, W / 2, cy);
+    cy += 46;
   }
+  ctx.font = `700 32px ${serif}`;
+  ctx.fillStyle = "#A9805C";
+  ctx.fillText("다시, 책이 골라줬어요", W / 2, cy + 14);
 
   // 다운로드
   const dataUrl = canvas.toDataURL("image/png");
   const a = document.createElement("a");
   a.href = dataUrl;
-  a.download = `bookmatch-${book.title.replace(/\s+/g, "_").slice(0, 20)}.png`;
+  a.download = `dasi-book-${book.title.replace(/\s+/g, "_").slice(0, 20)}.png`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

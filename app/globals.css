@@ -1,19 +1,39 @@
+@import url('https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
   color-scheme: light;
+
+  /* 다시(DASI) — 따뜻한 베이지/크림 팔레트 (조용하고 감성적인 책 결) */
+  --bg: #F3EEE4; /* 페이지 배경 */
+  --paper: #FCFAF5; /* 카드 */
+  --ink: #38322A; /* 본문 텍스트 */
+  --muted: #877D6D; /* 보조 텍스트 */
+  --faint: #B3A996; /* 흐린 텍스트 */
+  --line: #E8E1D3; /* 구분선 */
+  --accent: #A9805C; /* 포인트 (뮤트 클레이) */
+  --accent-deep: #8A6547;
+  --accent-soft: #EFE6DA;
 }
 
 html,
 body {
   padding: 0;
   margin: 0;
-  background: #ffffff;
-  color: #1a1a1a;
+  background: var(--bg);
+  color: var(--ink);
+  /* 기본 폰트 = 명조(세리프). 조용한 책 느낌을 위해 전역 적용 */
+  font-family: "Nanum Myeongjo", "Gowun Batang", AppleMyungjo, Batang, Georgia, serif;
+  letter-spacing: -0.1px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  min-height: 100vh;
 }
 
 * {
@@ -39,7 +59,7 @@ a {
 }
 
 .animate-fade-up {
-  animation: fadeUp 0.35s ease-out both;
+  animation: fadeUp 0.45s ease-out both;
 }
 
 /* 로딩 점 애니메이션 */
