@@ -26,6 +26,66 @@ const SYSTEM_PROMPT = `너는 세계 최고의 책 큐레이터야.
   "kakao_query": "카카오검색어"
 }`;
 
+// API 키가 없을 때(무료 배포) 사용하는 샘플 추천 목록.
+// 실제 존재하는 책들로 구성되어 있어 키 없이도 앱이 정상 동작한다.
+const SAMPLE_BOOKS: Recommendation[] = [
+  {
+    title: "여름은 오래 그곳에 남아",
+    author: "마쓰이에 마사시",
+    reason:
+      "복잡한 마음을 천천히 가라앉히고 싶은 지금, 조용한 산장에서 흐르는 시간을 담은 이 소설이 잘 맞아요. 미니멀한 문장과 따뜻한 결이 카페에서 읽기에도 좋고, 무엇보다 잔잔한 위로를 건네줍니다.",
+    match: 94,
+    difficulty: 2,
+    emotion: 4,
+    thickness: 3,
+    yes24_query: "여름은 오래 그곳에 남아",
+    kakao_query: "여름은 오래 그곳에 남아",
+  },
+  {
+    title: "아침의 피아노",
+    author: "김진영",
+    reason:
+      "삶의 마지막 순간까지 하루하루를 기록한 철학자의 문장들이, 답을 강요하지 않고 곁에 조용히 머물러요. 짧은 글이 모여 있어 부담 없이 펼칠 수 있고, 지친 마음에 깊은 위안을 줍니다.",
+    match: 91,
+    difficulty: 2,
+    emotion: 5,
+    thickness: 2,
+    yes24_query: "아침의 피아노",
+    kakao_query: "아침의 피아노",
+  },
+  {
+    title: "여행의 이유",
+    author: "김영하",
+    reason:
+      "떠나고 싶지만 떠나지 못하는 마음을 다독여주는 산문집이에요. 위트 있는 문장 사이사이 생각할 거리가 놓여 있어, 복잡한 머릿속을 환기하기에 딱 좋습니다.",
+    match: 89,
+    difficulty: 2,
+    emotion: 3,
+    thickness: 3,
+    yes24_query: "여행의 이유",
+    kakao_query: "여행의 이유",
+  },
+  {
+    title: "어린이라는 세계",
+    author: "김소영",
+    reason:
+      "아이들을 곁에서 지켜본 어른의 다정한 시선이, 조급했던 마음을 부드럽게 풀어줘요. 따뜻하고 유쾌한 장면들이 많아 읽는 내내 마음이 환해집니다.",
+    match: 92,
+    difficulty: 1,
+    emotion: 4,
+    thickness: 3,
+    yes24_query: "어린이라는 세계",
+    kakao_query: "어린이라는 세계",
+  },
+];
+
+// 제외 목록에 없는 샘플 책을 하나 고른다. 모두 제외됐으면 아무거나 반환.
+function pickSample(exclude: string[]): Recommendation {
+  const available = SAMPLE_BOOKS.filter((b) => !exclude.includes(b.title));
+  const pool = available.length > 0 ? available : SAMPLE_BOOKS;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
 // 응답 텍스트에서 첫 번째 JSON 객체를 뽑아낸다.
 function extractJson(text: string): unknown {
   const start = text.indexOf("{");
@@ -75,12 +135,6 @@ function buildUserPrompt(answers: Answers, exclude: string[]): string {
 
 export async function POST(req: NextRequest) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    return NextResponse.json(
-      { error: "서버에 ANTHROPIC_API_KEY 가 설정되지 않았어요." },
-      { status: 500 },
-    );
-  }
 
   let body: { answers?: Answers; exclude?: string[] };
   try {
@@ -96,6 +150,11 @@ export async function POST(req: NextRequest) {
       { error: "답변 데이터가 없어요." },
       { status: 400 },
     );
+  }
+
+  // 무료 모드: API 키가 없으면 에러 대신 샘플 책으로 추천한다.
+  if (!apiKey) {
+    return NextResponse.json(pickSample(exclude));
   }
 
   const client = new Anthropic({ apiKey });

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import BookCard from "@/components/BookCard";
+import Logo from "@/components/Logo";
 import type { AladinBook } from "@/app/api/aladin/route";
 import { LOADING_MESSAGES } from "@/lib/steps";
 import {
@@ -230,42 +231,42 @@ export default function ResultPage() {
   return (
     <main className="flex min-h-screen flex-col px-6 pb-12 pt-6">
       {/* 헤더 */}
-      <header className="mb-5 flex items-center justify-between">
-        <Link
-          href="/"
-          className="text-lg font-extrabold tracking-tight text-brand"
-        >
-          Bookmatch
+      <header className="mb-1.5 flex items-center justify-between">
+        <Link href="/" className="flex items-center gap-2">
+          <Logo size={26} />
+          <span className="text-[19px] font-bold tracking-[-0.5px] text-brand-dark">
+            Bookmatch
+          </span>
         </Link>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           <Link
             href="/pricing"
-            className="rounded-full bg-brand-soft px-3 py-1.5 text-[12px] font-semibold text-brand transition-colors hover:bg-brand/15"
+            className="flex items-center gap-1 rounded-full bg-brand-soft px-3 py-1.5 text-[12px] font-bold text-brand-dark transition-colors hover:bg-[#fbdac8]"
           >
-            ⭐ 프리미엄
+            ✦ 프리미엄
           </Link>
           <Link
             href="/"
-            className="text-[13px] font-medium text-gray-400 hover:text-gray-600"
+            className="text-[12.5px] font-medium text-faint hover:text-muted"
           >
-            처음부터 다시
+            처음부터
           </Link>
         </div>
       </header>
 
-      <p className="mb-4 text-[15px] text-gray-500">
-        당신을 위한 오늘의 책을 찾았어요 ✨
+      <p className="mb-4 mt-2 text-[14.5px] text-muted">
+        오늘 당신에게 어울리는 한 권이에요 ✨
       </p>
 
       {/* 재추천 진행 중 오버레이 대신 상단 표시 */}
       {busy && (
-        <div className="mb-4 rounded-xl2 bg-brand-soft px-4 py-3 text-center text-[14px] font-medium text-brand">
+        <div className="mb-4 rounded-[18px] bg-brand-soft px-4 py-3 text-center text-[14px] font-medium text-brand-dark">
           새로운 책을 고르는 중...
         </div>
       )}
 
       {error && (
-        <div className="mb-4 rounded-xl2 bg-red-50 px-4 py-3 text-center text-[14px] text-red-600">
+        <div className="mb-4 rounded-[18px] bg-red-50 px-4 py-3 text-center text-[14px] text-red-600">
           {error}
           <button
             type="button"

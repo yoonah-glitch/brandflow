@@ -9,12 +9,12 @@ export default function PricingPage() {
   return (
     <main className="flex min-h-screen flex-col px-6 pb-10 pt-6">
       {/* 헤더 */}
-      <div className="mb-6 flex items-center gap-3">
+      <div className="mb-2 flex items-center gap-3">
         <button
           type="button"
           onClick={() => router.back()}
           aria-label="뒤로가기"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-gray-100"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-brand-soft hover:text-brand-dark"
         >
           <svg
             width="20"
@@ -29,15 +29,21 @@ export default function PricingPage() {
             <path d="M15 18l-6-6 6-6" />
           </svg>
         </button>
-        <h1 className="text-xl font-extrabold tracking-tight text-ink">요금제</h1>
       </div>
 
-      <p className="mb-6 text-[15px] leading-relaxed text-gray-500">
-        무료로도 매달 3권을 추천받을 수 있어요.
-        <br />
-        더 자주 읽는 분이라면 <span className="font-semibold text-brand">무제한</span>
-        으로 즐겨보세요.
-      </p>
+      <div className="mb-[26px] text-center">
+        <div className="text-[11.5px] font-bold uppercase tracking-[1.4px] text-brand">
+          Bookmatch 프리미엄
+        </div>
+        <h1 className="mt-2 text-[26px] font-bold tracking-[-0.5px] text-ink">
+          더 자주 읽는 당신에게
+        </h1>
+        <p className="mt-2 text-[14px] leading-[1.6] text-muted">
+          무료로도 매달 3권을 추천받을 수 있어요.
+          <br />
+          제한 없이 즐기고 싶다면 프리미엄으로.
+        </p>
+      </div>
 
       <PricingPlans />
     </main>

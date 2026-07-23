@@ -15,12 +15,6 @@ JSON 없이 자연스러운 한국어 문단으로만 답해. 마크다운이나
 
 export async function POST(req: NextRequest) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    return NextResponse.json(
-      { error: "서버에 ANTHROPIC_API_KEY 가 설정되지 않았어요." },
-      { status: 500 },
-    );
-  }
 
   let body: {
     answers?: Answers;
@@ -37,6 +31,18 @@ export async function POST(req: NextRequest) {
   const { answers, title, author, reason } = body;
   if (!title) {
     return NextResponse.json({ error: "책 정보가 없어요." }, { status: 400 });
+  }
+
+  // 무료 모드: API 키가 없으면 에러 대신 다정한 기본 설명을 돌려준다.
+  if (!apiKey) {
+    const explanation = [
+      `《${title}》${author ? `(${author})` : ""}은 지금 당신의 마음에 특히 잘 어울리는 책이에요.`,
+      reason ? reason : "",
+      "천천히 한 장씩 넘기다 보면, 오늘의 기분과 상황에 조용히 스며드는 순간을 만나게 될 거예요. 부담 없이 첫 장을 펼쳐보세요. 이 책이 당신에게 좋은 위로가 되길 바라요.",
+    ]
+      .filter(Boolean)
+      .join(" ");
+    return NextResponse.json({ explanation });
   }
 
   const dislikes =

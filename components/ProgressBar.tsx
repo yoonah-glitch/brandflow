@@ -11,16 +11,18 @@ export default function ProgressBar({ current, total, label }: ProgressBarProps)
   const pct = Math.round((current / total) * 100);
   return (
     <div className="w-full">
-      <p className="mb-2 text-[13px] font-semibold text-brand">{label}</p>
+      <p className="mb-[9px] text-[12.5px] font-semibold text-brand-dark">
+        {label}
+      </p>
       <div
-        className="h-1.5 w-full overflow-hidden rounded-full bg-gray-100"
+        className="h-[5px] w-full overflow-hidden rounded-full bg-line"
         role="progressbar"
         aria-valuenow={current}
         aria-valuemin={0}
         aria-valuemax={total}
       >
         <div
-          className="h-full rounded-full bg-brand transition-all duration-300 ease-out"
+          className="h-full rounded-full bg-gradient-to-r from-brand to-brand-light transition-all duration-300 ease-out"
           style={{ width: `${pct}%` }}
         />
       </div>

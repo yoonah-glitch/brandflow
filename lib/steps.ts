@@ -10,6 +10,8 @@ export interface StepConfig {
   options?: string[]; // 칩 선택지
   placeholder?: string; // 텍스트 입력 placeholder
   skippable?: boolean; // 스킵 가능 여부
+  // 칩 아래 전체폭 점선 버튼(예: "MBTI를 잘 모르겠어요"). 선택 시 값을 ""로 두고 다음으로.
+  unsureLabel?: string;
 }
 
 // 8단계 온보딩 정의 (순서대로)
@@ -41,6 +43,7 @@ export const STEPS: StepConfig[] = [
       "ESTP", "ESFP", "ENFP", "ENTP",
       "ESTJ", "ESFJ", "ENFJ", "ENTJ",
     ],
+    unsureLabel: "MBTI를 잘 모르겠어요",
   },
   {
     key: "lifeBook",

@@ -46,21 +46,21 @@ export async function downloadShareCard(book: ResultBook): Promise<void> {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
 
-  // 배경 (은은한 보라 그라디언트)
+  // 배경 (은은한 크림 그라디언트)
   const grad = ctx.createLinearGradient(0, 0, 0, H);
-  grad.addColorStop(0, "#EEEDF9");
-  grad.addColorStop(1, "#ffffff");
+  grad.addColorStop(0, "#FCE7DB");
+  grad.addColorStop(1, "#FFFDFB");
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, W, H);
 
   // 상단 브랜드 워드마크
-  ctx.fillStyle = "#534AB7";
-  ctx.font = "700 44px -apple-system, BlinkMacSystemFont, sans-serif";
+  ctx.fillStyle = "#C1462C";
+  ctx.font = "700 44px 'Nanum Myeongjo', Georgia, serif";
   ctx.textAlign = "center";
   ctx.fillText("Bookmatch", W / 2, 120);
 
-  ctx.font = "500 30px -apple-system, sans-serif";
-  ctx.fillStyle = "#6E64D6";
+  ctx.font = "500 30px 'Nanum Myeongjo', Georgia, serif";
+  ctx.fillStyle = "#E8674A";
   ctx.fillText("나의 책 이상형", W / 2, 172);
 
   // 표지 이미지 (있으면)
@@ -74,7 +74,7 @@ export async function downloadShareCard(book: ResultBook): Promise<void> {
     if (img) {
       // 카드 뒤 그림자
       ctx.save();
-      ctx.shadowColor = "rgba(83,74,183,0.25)";
+      ctx.shadowColor = "rgba(176,74,44,0.25)";
       ctx.shadowBlur = 40;
       ctx.shadowOffsetY = 16;
       ctx.fillStyle = "#fff";
@@ -92,10 +92,10 @@ export async function downloadShareCard(book: ResultBook): Promise<void> {
 
   // 표지가 없거나 오염됐으면 자리표시 박스
   if (!book.cover || coverTainted) {
-    ctx.fillStyle = "#534AB7";
+    ctx.fillStyle = "#C1462C";
     ctx.fillRect(coverX, coverY, coverW, coverH);
     ctx.fillStyle = "#ffffff";
-    ctx.font = "600 34px -apple-system, sans-serif";
+    ctx.font = "600 34px 'Nanum Myeongjo', Georgia, serif";
     ctx.textAlign = "center";
     const titleLines = wrapText(ctx, book.title, coverW - 60).slice(0, 5);
     let ty = coverY + coverH / 2 - (titleLines.length - 1) * 24;
@@ -106,32 +106,32 @@ export async function downloadShareCard(book: ResultBook): Promise<void> {
   }
 
   // 매치 퍼센트 배지
-  ctx.fillStyle = "#534AB7";
+  ctx.fillStyle = "#E8674A";
   ctx.beginPath();
   ctx.arc(W / 2, coverY + coverH + 6, 62, 0, Math.PI * 2);
   ctx.fill();
   ctx.fillStyle = "#ffffff";
-  ctx.font = "800 40px -apple-system, sans-serif";
+  ctx.font = "800 40px 'Nanum Myeongjo', Georgia, serif";
   ctx.textAlign = "center";
   ctx.fillText(`${book.match}%`, W / 2, coverY + coverH + 20);
 
   // 제목 / 저자
   const textTop = coverY + coverH + 120;
-  ctx.fillStyle = "#1a1a1a";
-  ctx.font = "700 48px -apple-system, sans-serif";
+  ctx.fillStyle = "#2E2620";
+  ctx.font = "700 48px 'Nanum Myeongjo', Georgia, serif";
   const tLines = wrapText(ctx, book.title, W - 160).slice(0, 2);
   let yy = textTop;
   for (const l of tLines) {
     ctx.fillText(l, W / 2, yy);
     yy += 60;
   }
-  ctx.font = "400 30px -apple-system, sans-serif";
-  ctx.fillStyle = "#666";
+  ctx.font = "400 30px 'Nanum Myeongjo', Georgia, serif";
+  ctx.fillStyle = "#877567";
   ctx.fillText(book.author, W / 2, yy + 4);
 
   // 추천 이유
-  ctx.font = "400 30px -apple-system, sans-serif";
-  ctx.fillStyle = "#444";
+  ctx.font = "400 30px 'Nanum Myeongjo', Georgia, serif";
+  ctx.fillStyle = "#4a4239";
   const reasonLines = wrapText(ctx, book.reason, W - 200).slice(0, 4);
   let ry = yy + 74;
   for (const l of reasonLines) {

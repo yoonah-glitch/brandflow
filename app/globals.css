@@ -1,19 +1,47 @@
+@import url('https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
   color-scheme: light;
+
+  /* 따뜻한 코랄 & 크림 아이보리 팔레트 */
+  --bg: #FBF3EA;
+  --app: #FFFDFB;
+  --ink: #2E2620;
+  --muted: #877567;
+  --faint: #B8A697;
+  --line: #F1E6D9;
+  --line-2: #EBDDCC;
+  --brand: #E8674A;
+  --brand-2: #F2915E;
+  --brand-deep: #C1462C;
+  --brand-soft: #FCE7DB;
+  --brand-tint: #FDF6EF;
+  --brandRGB: 232, 103, 74;
+  --warmRGB: 176, 74, 44;
 }
 
 html,
 body {
   padding: 0;
   margin: 0;
-  background: #ffffff;
-  color: #1a1a1a;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Nanum Myeongjo", "Gowun Batang", AppleMyungjo, Batang, Georgia, serif;
+  letter-spacing: -0.1px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* 따뜻한 페이지 배경 (은은한 상단 그라디언트) */
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(120% 60% at 50% -10%, #FBE7D8 0%, rgba(251, 231, 216, 0) 55%),
+    var(--bg);
 }
 
 * {

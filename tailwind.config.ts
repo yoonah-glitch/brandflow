@@ -8,24 +8,41 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
+        // 명조(세리프) 계열을 기본으로 — 기기의 한국어 명조 우선
         sans: [
-          "-apple-system",
-          "BlinkMacSystemFont",
-          "Pretendard",
-          "Segoe UI",
-          "Roboto",
-          "sans-serif",
+          "Nanum Myeongjo",
+          "Gowun Batang",
+          "AppleMyungjo",
+          "Batang",
+          "Georgia",
+          "serif",
+        ],
+        serif: [
+          "Nanum Myeongjo",
+          "Gowun Batang",
+          "AppleMyungjo",
+          "Batang",
+          "Georgia",
+          "serif",
         ],
       },
       colors: {
-        // 포인트 컬러 (보라)
+        // 따뜻한 코랄 포인트 컬러
         brand: {
-          DEFAULT: "#534AB7",
-          light: "#6E64D6",
-          dark: "#413A94",
-          soft: "#EEEDF9",
+          DEFAULT: "#E8674A",
+          light: "#F2915E",
+          dark: "#C1462C",
+          soft: "#FCE7DB",
+          tint: "#FDF6EF",
         },
-        ink: "#1a1a1a",
+        ink: "#2E2620",
+        app: "#FFFDFB",
+        muted: "#877567",
+        faint: "#B8A697",
+        line: {
+          DEFAULT: "#F1E6D9",
+          2: "#EBDDCC",
+        },
       },
       borderRadius: {
         xl2: "1.25rem",
