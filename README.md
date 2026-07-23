@@ -1,142 +1,174 @@
-# Brandflow
+# 📚 Bookmatch
 
-브랜딩 스튜디오를 위한 인스타그램 게시물 이미지 생성 툴입니다.
-작업물(명함·로고 등) 사진의 배경을 브라우저에서 자동으로 제거하고,
-무드에 맞는 배경 4종에 합성해 바로 올릴 수 있는 이미지를 만들어줍니다.
+몇 가지 질문에 답하면 **AI 큐레이터(Claude)** 가 당신의 기분·취향·상황을 분석해
+지금 딱 맞는 **책 한 권**을 추천해주는 모바일 우선 웹앱입니다.
 
-**모든 처리는 브라우저 안에서 이루어지며, 이미지는 서버로 전송되지 않습니다.**
-
-## 기능
-
-1. 작업물 사진 업로드 — **여러 장 한꺼번에** (드래그앤드롭 + 클릭), 항목별 진행/재시도
-2. 브라우저에서 누끼 자동 추출 ([@imgly/background-removal](https://github.com/imgly/background-removal-js))
-   - 한 장 → 4가지 스타일 변형 / 여러 장 → 사진당 1개씩 배치 생성 + **전체 ZIP 다운로드**
-3. 무드 태그 선택 — 미니멀 / 내추럴 / 다크 / 럭셔리 / 비비드
-4. 무드별 **스튜디오 배경 4종**에 **3D 느낌으로 합성**
-   (그라디언트 깊이 + 소프트 조명 + 보케 + 필름 그레인 + 비네트, 접지 그림자·반사·방향 그림자)
-5. **사이즈 선택** — Instagram·Facebook·X·YouTube·Pinterest 프리셋 + **가로×세로 자유 입력**
-6. 합성 이미지 PNG 개별 다운로드 (`{mood}_{width}x{height}_{번호}.png`)
+- 8단계 온보딩(한 번에 하나씩, 뒤로가기 · 스킵 지원)
+- Claude 가 실제 존재하는 한국 책/번역본을 1권 추천 (매치%·추천 이유·책 온도계)
+- 카카오 책 검색 API 로 표지 이미지 표시
+- 예스24 구매 링크, 인스타 공유용 카드 이미지 저장, 친구 초대 보너스
+- 마지막 추천 결과 localStorage 저장
 
 ## 기술 스택
 
-- Next.js 14 (App Router)
-- TypeScript
-- Tailwind CSS
-- @imgly/background-removal (누끼 추출, WASM)
-- Canvas API (리사이즈 + 스튜디오 씬 렌더링 + 3D 합성)
+- **Next.js 14** (App Router)
+- **TypeScript**
+- **Tailwind CSS** (포인트 컬러 `#534AB7`)
+- **Anthropic Claude API** — 모델 `claude-sonnet-4-6`
+- **카카오 책 검색 API** — 표지 이미지
+- **Vercel** 배포 준비 (`vercel.json` 포함)
 
-## 시작하기
+---
+
+## 1. 사전 준비 — API 키 발급
+
+### Anthropic Claude API 키
+
+1. [console.anthropic.com](https://console.anthropic.com/) 로그인
+2. **API Keys → Create Key** 로 키 발급 (`sk-ant-...`)
+
+### 카카오 REST API 키 (책 표지용)
+
+1. [developers.kakao.com](https://developers.kakao.com/) 로그인
+2. **내 애플리케이션 → 애플리케이션 추가** 로 앱 생성
+3. **앱 키 → REST API 키** 복사
+4. (책 검색 API는 별도 동의 없이 REST 키만으로 호출됩니다.)
+
+> 카카오 키가 없어도 앱은 동작합니다. 이 경우 표지 이미지 없이 제목 카드로 대체됩니다.
+
+---
+
+## 2. 로컬 실행
 
 ```bash
-npm install      # 의존성 설치 + 모델 에셋을 public/models 로 자동 복사(postinstall)
-npm run dev      # 개발 서버 (http://localhost:3000)
+# 1) 의존성 설치
+npm install
+
+# 2) 환경변수 파일 생성 후 값 채우기
+cp .env.example .env.local
+#   ANTHROPIC_API_KEY=sk-ant-...
+#   KAKAO_API_KEY=...
+#   NEXT_PUBLIC_BASE_URL=http://localhost:3000
+
+# 3) 개발 서버 실행
+npm run dev
 ```
 
-프로덕션 빌드:
+브라우저에서 [http://localhost:3000](http://localhost:3000) 접속.
+
+프로덕션 빌드 확인:
 
 ```bash
 npm run build
 npm run start
 ```
 
-## Vercel 배포
+---
 
-이 저장소를 Vercel 에 **GitHub 연동(Import)** 으로 올리면 자동 배포됩니다.
+## 3. 환경변수
 
-1. [vercel.com/new](https://vercel.com/new) → GitHub 계정 연결 → `brandflow` 저장소 Import
-2. 배포할 브랜치를 `claude/instagram-post-generator-5d7fu6`(또는 병합 후 기본 브랜치)로 선택
-3. Framework 는 자동으로 **Next.js** 로 감지됨 — 별도 설정 없이 Deploy
-4. 완료되면 `https://<프로젝트>.vercel.app` URL 발급
+| 변수 | 필수 | 설명 |
+| --- | --- | --- |
+| `ANTHROPIC_API_KEY` | ✅ | Claude API 키 (서버 전용, 브라우저 노출 금지) |
+| `KAKAO_API_KEY` | 선택 | 카카오 REST API 키 (책 표지). 없으면 표지 없이 동작 |
+| `NEXT_PUBLIC_BASE_URL` | ✅ | 서비스 기본 URL. 친구 초대 링크 생성에 사용 |
 
-배포 시 모델은 `.env.production` 에 지정된 **imgly CDN** 에서 로드되므로
-200MB 모델을 배포 산출물에 싣지 않습니다. (`postinstall` 의 로컬 복사는
-Vercel 빌드에서 자동으로 건너뜀 — `scripts/copy-models.mjs` 의 `VERCEL` 가드)
+`ANTHROPIC_API_KEY`, `KAKAO_API_KEY` 는 **서버 라우트에서만** 사용되어 브라우저로
+노출되지 않습니다. `NEXT_PUBLIC_BASE_URL` 만 `NEXT_PUBLIC_` 접두사로 클라이언트에
+노출됩니다(초대 링크 생성용).
 
-> 모델까지 완전 self-host 로 배포하려면 `.env.production` 의
-> `NEXT_PUBLIC_IMGLY_PUBLIC_PATH` 를 지우고, 빌드 환경변수에서 `SKIP_MODEL_COPY`
-> 를 설정하지 않으면 됩니다. (배포 용량이 200MB 커집니다)
+---
 
-## 모델 에셋 (self-hosting)
+## 4. Vercel 배포
 
-누끼 추출 모델은 기본적으로 imgly CDN 에서 내려받지만, 이 프로젝트는
-`publicPath` 옵션으로 **자체 호스팅**하도록 구성돼 있습니다.
+1. 이 저장소를 GitHub 에 푸시
+2. [vercel.com/new](https://vercel.com/new) → GitHub 연동 → 저장소 **Import**
+3. Framework 는 자동으로 **Next.js** 감지 — 기본 빌드 설정 그대로
+4. **Settings → Environment Variables** 에 아래 3개 추가
+   - `ANTHROPIC_API_KEY`
+   - `KAKAO_API_KEY`
+   - `NEXT_PUBLIC_BASE_URL` → 배포 후 발급된 `https://<프로젝트>.vercel.app`
+5. **Deploy** → 완료되면 URL 발급
 
-- 실제 모델 파일은 `@imgly/background-removal-data` 패키지의 `dist` 에 들어있습니다.
-- `npm install` 시 `postinstall` 훅(`scripts/copy-models.mjs`)이 해당 파일들을
-  `public/models/` 로 복사합니다. (Next.js 에서 `/models/` 경로로 서빙됨)
-- 수동으로 다시 복사하려면: `npm run setup:models`
+> `vercel.json` 에 Claude 를 호출하는 라우트(`/api/recommend`, `/api/explain`)의
+> `maxDuration` 을 60초로 지정해 두었습니다.
 
-> `public/models` 는 용량이 커서(약 200MB) 저장소에 커밋하지 않습니다.
-> `.gitignore` 로 제외되며 `npm install` 때마다 자동 생성됩니다.
+> ⚠️ 배포 후 `NEXT_PUBLIC_BASE_URL` 값을 실제 배포 URL 로 바꾸고 재배포해야
+> 친구 초대 링크가 올바르게 생성됩니다.
 
-CDN 등 다른 경로를 쓰고 싶다면 환경변수로 재정의할 수 있습니다:
+---
 
-```bash
-# 예: imgly CDN 사용
-NEXT_PUBLIC_IMGLY_PUBLIC_PATH=https://staticimgly.com/@imgly/background-removal-data/1.4.5/dist/
-```
-
-## 프로젝트 구조
+## 5. 프로젝트 구조
 
 ```
 app/
-  layout.tsx          # 루트 레이아웃 / 메타데이터
-  page.tsx            # 메인 페이지 (업로드→누끼→무드→사이즈→결과 오케스트레이션)
-  globals.css
+  layout.tsx              # 루트 레이아웃 / 메타데이터 / 480px 모바일 컨테이너
+  globals.css             # Tailwind + 전역 스타일 / 애니메이션
+  page.tsx                # 메인 8단계 온보딩 (인트로 → 질문 → 결과 이동)
+  result/page.tsx         # 결과 페이지 (추천 로드 · 재추천 · 로딩 문구)
+  api/
+    recommend/route.ts    # Claude 추천 (JSON 반환 파싱)
+    book/route.ts         # 카카오 책 검색 (표지 이미지)
+    explain/route.ts      # "왜 이 책인지" 추가 설명 (Claude)
 components/
-  ImageUploader.tsx   # 드래그앤드롭 업로드 + 진행률 + 에러/재시도
-  MoodSelector.tsx    # 무드 선택
-  SizeSelector.tsx    # 사이즈 프리셋 + 커스텀 가로×세로 입력
-  ResultGrid.tsx      # 결과 2열 그리드 + 다운로드
+  Chip.tsx                # 둥근 선택 칩
+  ProgressBar.tsx         # 상단 진행률 바 + 문구
+  BookCard.tsx            # 추천 결과 카드 (표지·매치·이유·구매·공유·재추천)
+  Thermometer.tsx         # 책 온도계 (난이도/감성/두께 ●●●○○)
 lib/
-  backgrounds.ts      # 무드별 스튜디오 씬 스펙(그라디언트/블룸/보케/그레인/비네트)
-  sizes.ts            # 사이즈 프리셋 + 커스텀 사이즈 유틸
-  canvasUtils.ts      # 씬 렌더링 + 3D 합성(그림자/반사/조명) + 파일명
-  imageUtils.ts       # 유효성 검사 + 리사이즈 + 브라우저 지원 체크
-scripts/
-  copy-models.mjs     # 모델 에셋 복사(postinstall)
-public/models/        # 자동 생성되는 모델 에셋 (gitignore)
+  types.ts                # 공용 타입 · localStorage 키 · 무료 횟수
+  steps.ts                # 8단계 정의 · 진행률 문구 · 로딩 문구
+  shareCard.ts            # 인스타 공유용 카드 이미지(canvas) 생성/다운로드
 ```
 
-## 주요 구현 노트
+---
 
-- `@imgly/background-removal` 와 Canvas API 는 `'use client'` 컴포넌트에서만 사용합니다.
-- 누끼 추출 라이브러리는 `dynamic import`(`await import(...)`)로 로드해 SSR 을 피합니다.
-- 업로드 이미지는 처리 전 긴 변 기준 **최대 2000px** 로 리사이즈합니다.
-- `next.config.js` 에 WASM/Node 코어 모듈 fallback webpack 설정을 추가해 Vercel 배포에 대응합니다.
+## 6. 동작 방식
 
-## 무드별 스튜디오 배경 (씬 4종)
+### 온보딩 (`app/page.tsx`)
 
-단색/평면이 아니라 캔버스로 그라디언트·조명·질감을 합성한 "스튜디오 씬"입니다.
+1. 요즘 기분 · 2. MBTI · 3. 인생책(스킵) · 4. 표지 취향 · 5. 읽는 장소 ·
+6. 원하는 것 · 7. 싫어하는 것(복수) · 8. 최근 읽은 책(스킵)
 
-| 무드 | 씬 특징 |
-| --- | --- |
-| 미니멀 | 오프화이트 그라디언트 + 부드러운 상단광 + 미세 그레인 |
-| 내추럴 | 베이지·그린 그라디언트 + 따뜻한 자연광 블룸 |
-| 다크 | 차콜 그라디언트 + 피사체 뒤 스포트라이트 + 강한 비네트 + 그레인 |
-| 럭셔리 | 딥블랙→골드 그라디언트 + 골드 보케 + 림라이트 |
-| 비비드 | 파스텔 그라디언트 + 컬러 보케 |
+- 단일 선택 칩은 고르면 자동으로 다음 단계로 넘어갑니다.
+- 각 단계 상단에 뒤로가기 버튼과 `"3/8 단계 · 거의 다 왔어요!"` 진행률 텍스트.
+- 완료 시 응답을 localStorage 에 저장하고 `/result` 로 이동.
 
-각 씬 위에 **접지 그림자 + 반사 + 방향성 드롭섀도**를 얹어 입체감을 만듭니다.
+### 추천 (`app/result/page.tsx` + `/api/recommend`)
 
-## AI 배경 생성 (선택)
+- 온보딩 응답을 Claude(`claude-sonnet-4-6`)에 전달 → 아래 JSON 을 받아 파싱
 
-"배경 선택" 단계에서 **✨ AI 배경** 탭을 켜면, 원하는 배경을 문장으로 설명해
-생성할 수 있습니다. (OpenAI `gpt-image-1`, 4장 생성 후 누끼를 3D로 합성)
+  ```json
+  {
+    "title": "책제목", "author": "저자명", "reason": "추천이유",
+    "match": 85, "difficulty": 3, "emotion": 4, "thickness": 2,
+    "yes24_query": "예스24검색어", "kakao_query": "카카오검색어"
+  }
+  ```
 
-- 프롬프트 → 서버 라우트 `app/api/generate-bg` → OpenAI → 배경 4장
-- **API 키는 서버 환경변수(`OPENAI_API_KEY`)에만** 두고 브라우저로 노출하지 않습니다.
-- 키가 없으면 이 기능만 비활성 안내가 뜨고, 나머지(무드 프리셋)는 정상 동작합니다.
+- `kakao_query` 로 카카오 책 검색 → 표지 이미지 결합
+- 로딩 중 재밌는 문구 3개가 랜덤 교체
+- 결과는 localStorage 에 저장되어 새로고침해도 유지
 
-```bash
-# 로컬
-cp .env.example .env.local
-# .env.local 의 OPENAI_API_KEY 를 채우고 npm run dev
-```
+### 재추천 규칙
 
-Vercel 배포 시에는 프로젝트 **Settings → Environment Variables** 에 `OPENAI_API_KEY`
-를 추가하세요. (이미지 생성은 시간이 걸려 라우트에 `maxDuration = 60` 을 지정해 두었습니다.)
+- **🙈 이 책 별로예요** — 횟수 차감 **없이** 현재 책을 제외하고 다시 추천
+- **🔄 다른 책 추천** — 남은 무료 횟수(기본 3회)에서 1회 차감
+- **🔗 친구 초대** — 초대 링크 복사 시 추천 1회 추가
+- 이미 추천한 책은 다음 추천에서 제외(중복 방지)
 
-> 참고: 핀터레스트 등 타인의 이미지를 긁어와 번들·재배포하는 방식은 저작권 문제로
-> 지원하지 않습니다. AI 생성 또는 상업적 사용이 허용된 스톡(Unsplash/Pexels) 연동이
-> 안전한 대안입니다.
+### 결과 카드 요소
+
+표지 이미지 · 제목/저자 · 매치 퍼센트(85–99) · 추천 이유 · 책 온도계
+· "왜 이 책인지 더 알고 싶어요"(Claude 추가 설명) · 예스24 구매 링크
+· 인스타 공유용 카드 이미지 저장 · 친구 초대 · 남은 추천 횟수 · 재추천 버튼
+
+---
+
+## 7. 참고
+
+- Claude 응답은 텍스트에서 JSON 을 추출해 파싱하며, 숫자 필드는 안전 범위로 보정합니다.
+- 카카오 표지 이미지는 CORS 제약이 있을 수 있어, 공유 카드 생성 시 표지가
+  canvas 를 오염시키면 표지 없이 텍스트 카드로 안전하게 대체합니다.
+- 존재하지 않는 책 추천을 막기 위한 시스템 프롬프트가 적용되어 있으나,
+  LLM 특성상 드물게 부정확할 수 있습니다.

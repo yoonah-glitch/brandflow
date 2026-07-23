@@ -21,11 +21,11 @@ yarn-error.log*
 
 # local env files
 .env*.local
+.env
 
 # typescript
 *.tsbuildinfo
 next-env.d.ts
 
-# imgly 모델 에셋 (postinstall 로 자동 복사됨, 용량이 커서 커밋하지 않음)
-/public/models/*
-!/public/models/.gitkeep
+# vercel
+.vercel

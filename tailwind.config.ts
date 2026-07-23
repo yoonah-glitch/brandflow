@@ -18,8 +18,20 @@ const config: Config = {
         ],
       },
       colors: {
+        // 포인트 컬러 (보라)
+        brand: {
+          DEFAULT: "#534AB7",
+          light: "#6E64D6",
+          dark: "#413A94",
+          soft: "#EEEDF9",
+        },
         ink: "#1a1a1a",
-        paper: "#faf9f7",
+      },
+      borderRadius: {
+        xl2: "1.25rem",
+      },
+      maxWidth: {
+        app: "480px",
       },
     },
   },

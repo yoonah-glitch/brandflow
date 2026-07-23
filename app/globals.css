@@ -2,15 +2,54 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  color-scheme: light;
+}
+
 html,
 body {
   padding: 0;
   margin: 0;
-  background: #faf9f7;
+  background: #ffffff;
   color: #1a1a1a;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 * {
   box-sizing: border-box;
+}
+
+/* 모바일에서 tap 시 파란 하이라이트 제거 */
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 살짝 떠오르는 등장 애니메이션 */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  animation: fadeUp 0.35s ease-out both;
+}
+
+/* 로딩 점 애니메이션 */
+@keyframes pulseDot {
+  0%,
+  80%,
+  100% {
+    opacity: 0.25;
+  }
+  40% {
+    opacity: 1;
+  }
 }
