@@ -29,7 +29,7 @@ const COUPANG_AFFILIATE_ID =
   process.env.NEXT_PUBLIC_COUPANG_AFFILIATE_ID || "AF8666448";
 
 export function buildStoreLinks(book: ResultBook): StoreLink[] {
-  // 서점 검색어 (Claude 가 준 예스24 검색어를 공용으로 사용)
+  // 검색 폴백에 쓰는 검색어 (Claude 가 준 검색어 → 없으면 제목)
   const q = (book.yes24_query || book.title || "").trim();
   const links: StoreLink[] = [];
 
@@ -52,24 +52,6 @@ export function buildStoreLinks(book: ResultBook): StoreLink[] {
     url: coupangTpl
       ? fill(coupangTpl, q)
       : `https://www.coupang.com/np/search?q=${encodeURIComponent(q)}&channel=user&affiliate=${encodeURIComponent(COUPANG_AFFILIATE_ID)}`,
-  });
-
-  // ── 예스24 ─────────────────────────────
-  const yes24Tpl = process.env.NEXT_PUBLIC_YES24_LINK_TEMPLATE;
-  links.push({
-    name: "예스24",
-    url: yes24Tpl
-      ? fill(yes24Tpl, q)
-      : `https://www.yes24.com/Product/Search?domain=BOOK&query=${encodeURIComponent(q)}`,
-  });
-
-  // ── 교보문고 ────────────────────────────
-  const kyoboTpl = process.env.NEXT_PUBLIC_KYOBO_LINK_TEMPLATE;
-  links.push({
-    name: "교보문고",
-    url: kyoboTpl
-      ? fill(kyoboTpl, q)
-      : `https://search.kyobobook.co.kr/search?keyword=${encodeURIComponent(q)}`,
   });
 
   return links;
