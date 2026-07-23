@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { Answers, ResultBook } from "@/lib/types";
 import Thermometer from "./Thermometer";
 import { downloadShareCard } from "@/lib/shareCard";
+import { buildStoreLinks } from "@/lib/affiliate";
 
 interface BookCardProps {
   book: ResultBook;
@@ -30,9 +31,7 @@ export default function BookCard({
   const [copied, setCopied] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const yes24Url =
-    "https://www.yes24.com/Product/Search?domain=BOOK&query=" +
-    encodeURIComponent(book.yes24_query || book.title);
+  const storeLinks = buildStoreLinks(book);
 
   async function handleExplain() {
     if (explainLoading) return;
@@ -157,25 +156,40 @@ export default function BookCard({
             <p className="text-[13px] text-red-500">{explainError}</p>
           )}
 
-          {/* 구매 / 공유 */}
-          <div className="mt-1 grid grid-cols-2 gap-2">
-            <a
-              href={yes24Url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center rounded-full bg-brand px-4 py-3 text-[14px] font-semibold text-white transition-colors hover:bg-brand-dark"
-            >
-              예스24에서 보기
-            </a>
-            <button
-              type="button"
-              onClick={handleShare}
-              disabled={saving}
-              className="flex items-center justify-center rounded-full border border-gray-200 px-4 py-3 text-[14px] font-semibold text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-60"
-            >
-              {saving ? "저장 중..." : "📸 공유카드 저장"}
-            </button>
+          {/* 구매처 (제휴 링크) */}
+          <div className="mt-1">
+            <p className="mb-2 text-[13px] font-medium text-gray-500">
+              구매하러 가기
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {storeLinks.map((store, i) => (
+                <a
+                  key={store.name}
+                  href={store.url}
+                  target="_blank"
+                  rel="noopener noreferrer sponsored"
+                  className={[
+                    "flex items-center justify-center rounded-full px-2 py-3 text-[14px] font-semibold transition-colors",
+                    i === 0
+                      ? "bg-brand text-white hover:bg-brand-dark"
+                      : "border border-gray-200 text-gray-700 hover:bg-gray-50",
+                  ].join(" ")}
+                >
+                  {store.name}
+                </a>
+              ))}
+            </div>
           </div>
+
+          {/* 공유카드 저장 */}
+          <button
+            type="button"
+            onClick={handleShare}
+            disabled={saving}
+            className="flex items-center justify-center rounded-full border border-gray-200 px-4 py-3 text-[14px] font-semibold text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-60"
+          >
+            {saving ? "저장 중..." : "📸 인스타 공유카드 저장"}
+          </button>
         </div>
       </div>
 

@@ -29,8 +29,16 @@ export default function RootLayout({
     <html lang="ko">
       <body className="font-sans">
         {/* 모바일 우선: 화면 가운데 480px 컨테이너 */}
-        <div className="mx-auto min-h-screen w-full max-w-app bg-white">
-          {children}
+        <div className="mx-auto flex min-h-screen w-full max-w-app flex-col bg-white">
+          <div className="flex-1">{children}</div>
+          {/* 쿠팡 파트너스 고지 (필수) */}
+          <footer className="px-6 py-5">
+            <p className="text-center text-[11px] leading-relaxed text-gray-400">
+              이 서비스는 쿠팡 파트너스 활동의 일환으로,
+              <br />
+              이에 따른 일정액의 수수료를 제공받습니다.
+            </p>
+          </footer>
         </div>
       </body>
     </html>
