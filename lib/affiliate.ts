@@ -33,6 +33,16 @@ export function buildStoreLinks(book: ResultBook): StoreLink[] {
   const q = (book.yes24_query || book.title || "").trim();
   const links: StoreLink[] = [];
 
+  // ── 알라딘 ──────────────────────────────
+  // 알라딘 API 가 준 상품 링크(link, ttbkey 제휴 추적 포함)를 우선 사용.
+  // 없으면 알라딘 검색 페이지로 폴백.
+  links.push({
+    name: "알라딘",
+    url:
+      book.aladinLink ||
+      `https://www.aladin.co.kr/search/wsearchresult.aspx?SearchWord=${encodeURIComponent(q)}`,
+  });
+
   // ── 쿠팡 (쿠팡 파트너스) ──────────────────
   // 지정 형식: /np/search?q={책제목}&channel=user&affiliate={파트너스ID}
   // 템플릿이 설정돼 있으면 그걸 우선 사용한다.

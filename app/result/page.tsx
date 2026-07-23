@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import BookCard from "@/components/BookCard";
+import type { AladinBook } from "@/app/api/aladin/route";
 import { LOADING_MESSAGES } from "@/lib/steps";
 import {
   FREE_LIMIT,
@@ -88,23 +89,41 @@ export default function ResultPage() {
       if (!recRes.ok) throw new Error(recData.error || "추천 실패");
       const rec = recData as Recommendation;
 
-      // 카카오 표지 (실패해도 계속 진행)
       let cover: string | null = null;
       let kakaoAuthors: string[] = [];
+      let aladinLink: string | null = null;
+      let priceSales: number | null = null;
+
+      // 1) 알라딘: 표지 + 상품 링크 + 판매가 (실패해도 계속 진행)
+      try {
+        const alRes = await fetch(
+          "/api/aladin?query=" + encodeURIComponent(rec.title),
+        );
+        const alData = (await alRes.json()) as { book: AladinBook | null };
+        if (alData.book) {
+          cover = alData.book.cover || null;
+          aladinLink = alData.book.link || null;
+          priceSales = alData.book.priceSales || null;
+        }
+      } catch {
+        /* 알라딘 없이 진행 */
+      }
+
+      // 2) 카카오: 알라딘 표지가 없을 때만 폴백으로 표지 가져오기
       try {
         const bookRes = await fetch(
           "/api/book?query=" + encodeURIComponent(rec.kakao_query || rec.title),
         );
         const bookData = (await bookRes.json()) as { book: KakaoBook | null };
         if (bookData.book) {
-          cover = bookData.book.thumbnail || null;
+          if (!cover) cover = bookData.book.thumbnail || null;
           kakaoAuthors = bookData.book.authors || [];
         }
       } catch {
         /* 표지 없이 진행 */
       }
 
-      return { ...rec, cover, kakaoAuthors };
+      return { ...rec, cover, kakaoAuthors, aladinLink, priceSales };
     },
     [],
   );

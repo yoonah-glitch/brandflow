@@ -44,10 +44,12 @@ export interface KakaoBook {
   contents: string;
 }
 
-// 결과 화면에서 사용하는, 추천 + 표지 이미지를 합친 형태
+// 결과 화면에서 사용하는, 추천 + 표지/구매정보를 합친 형태
 export interface ResultBook extends Recommendation {
-  cover: string | null; // 카카오에서 찾은 표지 이미지 (없으면 null)
+  cover: string | null; // 표지 이미지 (알라딘 우선, 없으면 카카오)
   kakaoAuthors: string[]; // 카카오가 알려준 저자 (보정용)
+  aladinLink: string | null; // 알라딘 상품 링크 (ttbkey 제휴 추적 포함)
+  priceSales: number | null; // 알라딘 판매가
 }
 
 // localStorage 키

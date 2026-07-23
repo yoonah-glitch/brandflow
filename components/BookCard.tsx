@@ -122,6 +122,11 @@ export default function BookCard({
               {book.title}
             </h2>
             <p className="mt-1 text-sm text-gray-500">{book.author}</p>
+            {book.priceSales ? (
+              <p className="mt-1 text-[13px] font-semibold text-brand">
+                알라딘 판매가 {book.priceSales.toLocaleString("ko-KR")}원
+              </p>
+            ) : null}
           </div>
 
           <p className="text-[15px] leading-relaxed text-gray-700">
@@ -161,7 +166,7 @@ export default function BookCard({
             <p className="mb-2 text-[13px] font-medium text-gray-500">
               구매하러 가기
             </p>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               {storeLinks.map((store, i) => (
                 <a
                   key={store.name}
