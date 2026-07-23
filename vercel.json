@@ -6,9 +6,6 @@
   "functions": {
     "app/api/recommend/route.ts": {
       "maxDuration": 60
-    },
-    "app/api/explain/route.ts": {
-      "maxDuration": 60
     }
   }
 }

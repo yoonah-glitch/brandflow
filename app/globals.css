@@ -7,21 +7,16 @@
 :root {
   color-scheme: light;
 
-  /* 따뜻한 코랄 & 크림 아이보리 팔레트 */
-  --bg: #FBF3EA;
-  --app: #FFFDFB;
-  --ink: #2E2620;
-  --muted: #877567;
-  --faint: #B8A697;
-  --line: #F1E6D9;
-  --line-2: #EBDDCC;
-  --brand: #E8674A;
-  --brand-2: #F2915E;
-  --brand-deep: #C1462C;
-  --brand-soft: #FCE7DB;
-  --brand-tint: #FDF6EF;
-  --brandRGB: 232, 103, 74;
-  --warmRGB: 176, 74, 44;
+  /* 다시(DASI) — 따뜻한 베이지/크림 팔레트 (조용하고 감성적인 책 결) */
+  --bg: #F3EEE4; /* 페이지 배경 */
+  --paper: #FCFAF5; /* 카드 */
+  --ink: #38322A; /* 본문 텍스트 */
+  --muted: #877D6D; /* 보조 텍스트 */
+  --faint: #B3A996; /* 흐린 텍스트 */
+  --line: #E8E1D3; /* 구분선 */
+  --accent: #A9805C; /* 포인트 (뮤트 클레이) */
+  --accent-deep: #8A6547;
+  --accent-soft: #EFE6DA;
 }
 
 html,
@@ -30,18 +25,15 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--ink);
+  /* 기본 폰트 = 명조(세리프). 조용한 책 느낌을 위해 전역 적용 */
   font-family: "Nanum Myeongjo", "Gowun Batang", AppleMyungjo, Batang, Georgia, serif;
   letter-spacing: -0.1px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* 따뜻한 페이지 배경 (은은한 상단 그라디언트) */
 body {
   min-height: 100vh;
-  background:
-    radial-gradient(120% 60% at 50% -10%, #FBE7D8 0%, rgba(251, 231, 216, 0) 55%),
-    var(--bg);
 }
 
 * {
@@ -67,7 +59,7 @@ a {
 }
 
 .animate-fade-up {
-  animation: fadeUp 0.35s ease-out both;
+  animation: fadeUp 0.45s ease-out both;
 }
 
 /* 로딩 점 애니메이션 */

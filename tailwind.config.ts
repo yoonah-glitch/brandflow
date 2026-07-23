@@ -27,22 +27,23 @@ const config: Config = {
         ],
       },
       colors: {
-        // 따뜻한 코랄 포인트 컬러
+        // 포인트 컬러 = 뮤트 클레이
         brand: {
-          DEFAULT: "#E8674A",
-          light: "#F2915E",
-          dark: "#C1462C",
-          soft: "#FCE7DB",
-          tint: "#FDF6EF",
+          DEFAULT: "#A9805C",
+          dark: "#8A6547",
+          soft: "#EFE6DA",
         },
-        ink: "#2E2620",
-        app: "#FFFDFB",
-        muted: "#877567",
-        faint: "#B8A697",
-        line: {
-          DEFAULT: "#F1E6D9",
-          2: "#EBDDCC",
+        accent: {
+          DEFAULT: "#A9805C",
+          deep: "#8A6547",
+          soft: "#EFE6DA",
         },
+        bg: "#F3EEE4",
+        paper: "#FCFAF5",
+        ink: "#38322A",
+        muted: "#877D6D",
+        faint: "#B3A996",
+        line: "#E8E1D3",
       },
       borderRadius: {
         xl2: "1.25rem",
